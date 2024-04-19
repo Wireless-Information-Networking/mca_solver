@@ -1,0 +1,6 @@
+latex>=0.7.0  # You should also install texlive for the plot
+torch>=2.2.2  # 1.11.0
+numpy>=1.26.4
+scipy>=1.13.0
+pandas>=2.2.2
+seaborn>=0.13.2
