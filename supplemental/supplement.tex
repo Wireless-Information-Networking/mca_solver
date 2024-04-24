@@ -1,0 +1,474 @@
+\documentclass[journal,onecolumn]{IEEEtran}
+
+\usepackage{xfp}
+\usepackage{ifthen}
+\usepackage{cancel}
+\usepackage{amsmath}  % for \aligned
+\usepackage{amssymb}  % for \mathbb
+\usepackage{oubraces}
+\usepackage{changepage}  % for bigger margins
+\usepackage[utf8]{inputenc}
+%\usepackage[outline]{contour}  % glow around text
+
+\usepackage{units}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{circuitikz}
+\usepackage{multicol} %TONI
+\usepackage[square,authoryear]{natbib}
+\usepackage{easyReview}
+
+\begin{filecontents}{jobname.bib}
+@article{Kouachi2006,
+  doi = {10.13001/1081-3810.1223},
+  url = {https://doi.org/10.13001/1081-3810.1223},
+  year = {2006},
+  month = jan,
+  publisher = {University of Wyoming Libraries},
+  volume = {15},
+  author = {Said Kouachi},
+  title = {Eigenvalues and eigenvectors of tridiagonal matrices},
+  journal = {The Electronic Journal of Linear Algebra}
+}
+\end{filecontents}
+
+\usetikzlibrary{3d,calc,hobby,graphs,positioning}
+\bibliographystyle{IEEEtran}  % unsrtnat
+\graphicspath{{images/}}
+% \setcitestyle{}
+
+\newcommand{\vtt}[1]{%
+  \text{\normalfont\ttfamily\detokenize{#1}}%
+}
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+\title{Memristor Crossbar Array Simulation for \\ Deep Learning Applications \\ ~ \\ \large Supplemental material}
+
+\newcommand{\xx}{3}
+\newcommand{\yy}{2}
+\newcommand{\z}{0}
+\newcommand{\w}{0}
+
+\begin{document}
+
+\maketitle
+
+\begin{figure}[h]
+\centering
+    \begin{circuitikz}[scale=1.,x={(0:2.5cm)},y={(90:2.5cm)},american voltages,transform shape]]
+    \foreach \x in {1,...,\xx} {
+        \foreach \y in {1,...,\yy} {
+            \renewcommand{\z}{\ifthenelse{\x=1}{1}{\y 0}}
+            \renewcommand{\w}{\ifthenelse{\y=\yy}{2}{\fpeval{\yy+\x}0}}
+            \draw (\x-1,-\y) to [R, l=$\z\Omega^{-1}$] ++(1,0) to [short, *-] ++(0,-.25) to [memristor, -*, l_=$.\fpeval{\x+(\y-1)*\xx}\Omega^{-1}$] ++(.8,0) to [R, l=$\w\Omega^{-1}$] ++(0,-.8) to [short] ++(0,-.2);
+        }
+    }
+
+    % South
+    \foreach \x in {1,...,\xx} \draw (\x+.798,-\yy-1.25) to ++(0,+.2) node[ground]{};  % node[anchor=east] {0V};
+
+    % West
+    \foreach \y in {1,...,\yy} {
+        \draw (0,-\y) node[vcc] {}node[anchor=-90,above=1em] {\y V};
+    }
+    \end{circuitikz}
+\caption{Memristor Crossbar Array (\yy~rows, \xx~columns)}
+\label{fig:red_mem}
+\end{figure}
+
+\section{Example: Construction of $\mathbf{G}_{ABCD}$}
+
+Here we show a very small example of how to construct $\mathbf{G}_{ABCD}$, indexed as indicated in \figurename~2 in the main paper.
+
+% \newpage
+From \figurename~\ref{fig:red_mem} we derive the following equations:
+
+\foreach \y in {1,...,\yy} {%
+    \foreach \x in {1,...,\xx} {%
+        \begin{equation*}
+            i^\vtt{tl}_{\y,\fpeval{\x-1}} = 
+            i^\vtt{tl}_{\y,\x} + i^{}_{\y,\x}%\par
+            ~\xrightarrow{}~
+            \frac{\ifthenelse{\x=1}{\add}{}{v^\vtt{tl}_{\y,\fpeval{\x-1}}} - v^\vtt{tl}_{\y,\x}}{\ifthenelse{\x=1}{\add}{}{r^\vtt{tl}_{\y,\fpeval{\x-1}}}} = \frac{v^\vtt{tl}_{\y,\x} - \ifthenelse{\x=\xx}{\add}{}{v^\vtt{tl}_{\y,\fpeval{\x+1}}}}{\ifthenelse{\x=\xx}{\add}{}{r^\vtt{tl}_{\y,\x}}} + \frac{v^\vtt{tl}_{\y,\x} - v^\vtt{bl}_{\y,\x}}{r^{}_{\y,\x}}
+        \end{equation*}
+    }
+}
+
+\newpage
+\foreach \y in {1,...,\yy} {%
+    \foreach \x in {1,...,\xx} {%
+        \begin{equation*}
+            i^\vtt{bl}_{\fpeval{\y-1},\x} + i^{}_{\y,\x} = i^\vtt{bl}_{\y,\x}%\par
+            ~\xrightarrow{}~
+            \frac{\ifthenelse{\y=1}{\add}{}{v^\vtt{bl}_{\fpeval{\y-1},\x}} - v^\vtt{bl}_{\y,\x}}{\ifthenelse{\y=1}{\add}{}{r^\vtt{bl}_{\fpeval{\y-1},\x}}} + \frac{v^\vtt{tl}_{\y,\x} - v^\vtt{bl}_{\y,\x}}{r^{}_{\y,\x}} = \frac{\ifthenelse{\y=\yy}{\add}{}{v^\vtt{bl}_{\y,\x}} - v^\vtt{bl}_{\fpeval{\y+1},\x}}{\ifthenelse{\y=\yy}{\add}{}{r^\vtt{bl}_{\y,\x}}}
+        \end{equation*}
+    }
+}
+
+From which we solve for the variables we use as inputs and outputs (marked in blue), those at the edge of the circuit, and then gather conductances together and separate the voltages, leaving us with a matrix equation such as:
+
+\begin{equation}
+    \begin{bmatrix} \mathbf{A} & \mathbf{B} \\ \mathbf{C} & \mathbf{D} \end{bmatrix} \mathbf{v}^\vtt{ext} = \begin{bmatrix}
+        \vdots \\ \overunderbraces{&\br{4}{\text{Part of } \mathbf{v}^\vtt{ext}}}{
+            \underbrace{-g^\vtt{tl}_{i,j-1}} & \overbrace{v^\vtt{tl}_{i,j-1}} + \underbrace{(g^\vtt{tl}_{i,j-1} + g^{}_{i,j} + g^\vtt{tl}_{i,j+1})}\overbrace{v^\vtt{tl}_{i,j}} \underbrace{-g^\vtt{tl}_{i,j+1}} & \overbrace{v^\vtt{tl}_{i,j+1}} & ~~ &\underbrace{-g^{}_{i,j}}\overbrace{v^\vtt{bl}_{i,j}}
+        }{\br{2}{\text{Part of } \mathbf{A}}& & &\br{1}{\text{Part of } \mathbf{B}}} \\   % & = 0 \\
+        \vdots \\ \overunderbraces{& \br{4}{\text{Part of } \mathbf{v}^\vtt{ext}}}{
+            \underbrace{g^{}_{i,j}} & \overbrace{v^\vtt{tl}_{i,j}} & ~+~ & \underbrace{g^\vtt{bl}_{i-1,j}}\overbrace{v^\vtt{bl}_{i-1,j}} \underbrace{-(g^\vtt{bl}_{i-1,j} + g^{}_{i,j} + g^\vtt{bl}_{i+1,j})}\overbrace{v^\vtt{bl}_{i,j}} + \underbrace{g^\vtt{bl}_{i+1,j}} & \overbrace{v^\vtt{bl}_{i+1,j}}
+        }{\br{2}{\text{Part of } \mathbf{C}} & & \br{1}{\text{Part of } \mathbf{D}}} \\   % & = 0 \\
+        \vdots \\
+    \end{bmatrix} = \begin{bmatrix}
+        v^\vtt{tl}_{1,0} \cdot g^\vtt{tl}_{1,0} \\
+        0 \\
+        v^\vtt{tl}_{1,\xx} \cdot g^\vtt{tl}_{1,\fpeval{\xx+1}} \vspace{8pt} \\
+        v^\vtt{tl}_{2,0} \cdot g^\vtt{tl}_{2,0} \\
+        0 \\
+        v^\vtt{tl}_{2,\xx} \cdot g^\vtt{tl}_{2,\fpeval{\xx+1}} \vspace{3pt}  \\
+        \hline \rule{0pt}{1.1\normalbaselineskip} 
+        v^\vtt{bl}_{0,1} \cdot g^\vtt{bl}_{0,1} \\
+        v^\vtt{bl}_{0,2} \cdot g^\vtt{bl}_{0,2} \\
+        v^\vtt{bl}_{0,3} \cdot g^\vtt{bl}_{0,3} \vspace{8pt} \\
+        v^\vtt{bl}_{\yy,1} \cdot g^\vtt{bl}_{\yy,1} \\
+        v^\vtt{bl}_{\yy,2} \cdot g^\vtt{bl}_{\yy,2} \\
+        v^\vtt{bl}_{\yy,3} \cdot g^\vtt{bl}_{\yy,3}
+    \end{bmatrix} % \mathbf{0}$$
+    \label{eq:abcd}
+\end{equation}
+    
+
+Note that in this example $v^\vtt{tl}_{i,0}$ are considered the inputs, and $v^\vtt{tl}_{i,\fpeval{\xx+1}} = v^\vtt{bl}_{0,j}=v^\vtt{bl}_{\fpeval{\yy+1},j} = 0$. Similarly, for the branches that are not present, we can consider infinite resistance ($r^{-1} = g = 0$), and therefore $g^\vtt{tl}_{i,\xx} = g^\vtt{bl}_{0,j} = 0$, which results in a sparser vector. This is generally the case when implementing a MCA, but to mitigate the attenuation of the signal due to wire resistance, $v^\vtt{tl}_{i,\fpeval{\xx+1}}$ might also act as an input.
+
+From (\ref{eq:abcd}) we extract $\mathbf{G}_{ABCD}$
+
+$$
+\mathbf{G}_{ABCD} = \begin{bmatrix} \mathbf{A} & \mathbf{B} \\ \mathbf{C} & \mathbf{D} \end{bmatrix} = 
+\left[
+\begin{array}{cc|cc}
+    \begin{matrix}
+        21.1 & -10         \\
+        -10  & 20.2 & -10  \\
+             & -10  & 20.3 \\
+    \end{matrix} && \begin{matrix} -0.1 \\ & -0.2 \\ && -0.3 \end{matrix} & \\
+    & \begin{matrix}
+        41.4 & -20         \\
+        -20  & 40.5 & -20  \\
+             & -20  & 40.6 \\
+    \end{matrix} && \begin{matrix} -0.4 \\ & -0.5 \\ && -0.6 \end{matrix} \\ \hline
+    \begin{matrix} -0.1 \\ & -0.2 \\ && -0.3 \end{matrix} && \begin{matrix} 60.1 \\ & 80.2 \\ && 100.3 \end{matrix} & \begin{matrix} -30 \\ & -40 \\ && -50 \end{matrix} \\
+    & \begin{matrix} -0.4 \\ & -0.5 \\ && -0.6 \end{matrix} & \begin{matrix} -30 \\ & -40 \\ && -50 \end{matrix} &  \begin{matrix} 62.4 \\ & 82.5 \\ && 102.6  \end{matrix}
+\end{array}\right]
+$$
+
+This matrix can be scaled so that the all wire resistances equal -1 during computation, which therefore do not need to be stored, and do not contribute to floating point errors during multiplication. \newpage
+
+More generally, the matrix can be constructed as:
+
+ $$\mathbf{G}^{}_{ABCD} = 
+    \left[ \begin{array}{cccccc|cccccc}
+         \mathbf{A}^{}_1 & 0 & \cdots & & & 0
+            & \mathbf{B}^{}_1 & 0 & \cdots & & & 0 \\
+         0 & \mathbf{A}^{}_2 & & & &
+            & 0 & \mathbf{B}^{}_2 \\
+         \vdots & & \ddots & & & \vdots
+            & \vdots & & \ddots & & & \vdots \\
+         & & & \mathbf{A}^{}_i & &
+            & & & & \mathbf{B}^{}_i \\
+         & & & & \ddots & 0
+            & & & & & \ddots & 0 \\
+         0 & & \cdots & & 0 & \mathbf{A}^{}_m
+            & 0 & & \cdots & & 0 & \mathbf{B}^{}_m \\
+    \hline
+         \mathbf{C}^{}_1 & 0 & \cdots & & & 0
+            & \mathbf{D}^{}_1 & -\mathbf{G}^{D}_1 & 0 & & \cdots & 0 \\
+         0 & \mathbf{C}^{}_2 & & & &
+            & -\mathbf{G}^{D}_1 & \mathbf{D}^{}_2 & -\mathbf{G}^{D}_2 & & & \vdots \\
+         \vdots & & \ddots & & & \vdots
+            & 0 & & \ddots & & & \\  % \vdots \\
+         & & & \mathbf{C}^{}_i & &
+            & & & -\mathbf{G}^{D}_{i-1} & \mathbf{D}^{}_i & -\mathbf{G}^{D}_i & 0\\
+         & & & & \ddots & 0
+            & \vdots & & & & \ddots & \\  % 0 \\
+         0 & & \cdots & & 0 & \mathbf{C}^{}_m
+            & 0 & \cdots & & 0 & -\mathbf{G}^{D}_{m-1} & \mathbf{D}^{}_m \\
+    \end{array} \label{eq:abcd} \right] $$  % _{\in \mathbb{R}^{2mn \times 2mn}}
+    Where $\mathbf{G}^{}_{ABCD} \in \mathbb{R}^{2mn \times 2mn}$, $(\mathbf{A}, \mathbf{D}) \in \mathbb{R}^{mn \times mn}$, $(\mathbf{B}, \mathbf{C}) \in \mathbb{R}^{mn \times mn}_{(-)}$, and $\mathbf{G}^{D}_i \in \mathbb{R}^{n \times n}_{(+)}$. \\
+
+    \begin{gather*}
+        \mathbf{A}^{}_i = \begin{bmatrix}
+            g^\vtt{tl}_{i,0} + g^{}_{i,1} + g^\vtt{tl}_{i,1} & -g^\vtt{tl}_{i,1} \\
+            -g^\vtt{tl}_{i,1} & g^\vtt{tl}_{i,1} + g^{}_{i,2} + g^\vtt{tl}_{i,2} & \ddots \\
+            & -g^\vtt{tl}_{i,2} & \ddots & -g^\vtt{tl}_{i,(j-1)} \\
+            & & \ddots & g^\vtt{tl}_{i,(j-1)} + g^{}_{i,j}+g^\vtt{tl}_{i,j} & \ddots \\
+            & & & -g^\vtt{tl}_{i,j} & \ddots & -g^\vtt{tl}_{i,(n-1)} \\
+            & & & & \ddots & g^\vtt{tl}_{i,(n-1)} + g^{}_{i,n} + g^\vtt{tl}_{i,n} \\
+        \end{bmatrix} \\
+        \mathbf{B}^{}_i = \mathbf{C}^\top_i = -\vtt{Diag}(\mathbf{g}^{}_{i^t}) = 
+        \begin{bmatrix}
+            -g^{}_{i,1} \\ & \ddots \\ & & -g^{}_{i,n}
+        \end{bmatrix} \\
+        \mathbf{D}^{}_i = \mathbf{G}^{D}_{i-1} + \vtt{Diag}(\mathbf{g}^{}_{i^t}) + \mathbf{G}^{D}_i
+    \end{gather*} Where $\mathbf{A}^{}_i \in \mathbb{R}^{n \times n}, (\mathbf{B}^{}_i, \mathbf{C}^{}_i) \in \mathbb{R}^{n \times n}_{(-)}$, and $\mathbf{D}^{}_i \in \mathbb{R}^{n \times n}_{(+)}$. \\ %}}}
+
+\newpage
+\section{Approximation of $\rho(\mathbf{G}_{ABCD})$}
+In the main paper, the upper left quadrant of $\mathbf{M}$ is a block diagonal, the lower right quadrant can be multiplied by permutation matrices to be such as well, but with sides of size $n \times n$ instead. Since the largest eigenvalue of a block diagonal is the largest value between each of the block, we will only demonstrate the solution for one block $\mathbf{M}^{(i)}$.
+
+\begin{equation}
+\frac{\mathbf{M}^{(i)}}{g^\vtt{tl}_{i,i}} = \mathbf{T'}_m(-1,2 + \frac{\alpha}{g^\vtt{tl}_{i,i}},-1,\mathbf{S})
+\label{eq:m}
+\end{equation}
+
+\begin{equation}
+\text{where } \mathbf{S} = \begin{bmatrix} 1 & 0 \\  \vdots & \vdots \\ 0 & 1 \end{bmatrix}\begin{bmatrix} 
+    \frac{g^\vtt{W}}{g^\vtt{tl}_{i,i}} \\ & \frac{g^\vtt{E}}{g^\vtt{tl}_{i,i}}
+\end{bmatrix} \begin{bmatrix} 1 & \cdots & 0 \\ 0 & \cdots & 1 \end{bmatrix}
+\end{equation}
+
+If we want to know the complexity of solving this, we need to approximate the amount of iterations we need to reach an acceptable error. We will describe the error as the 2-norm ($||\cdot||_2$) in this paper, but in code we use the Frobenius norm since it is less computationally taxing and $||\mathbf{A}||_2 \le ||\mathbf{A}||_F \le \sqrt{\vtt{rank}(\mathbf{A})}||\mathbf{A}||_2$. \\  % , also both monotone. \\
+
+The eigenvalues, according to \cite{Kouachi2006}, of a matrix of a similar form to (\ref{eq:m}) are
+% http://www.math.nthu.edu.tw/~amen/2005/040903-7.pdf
+$$\mathbf{T'}_m (c,b,a,\mathbf{0}) = \mathbf{T'}_V \mathbf{T'}_D \mathbf{T'}_V^{-1}$$
+% $$\mathbf{T'}_m (a,b,a,\mathbf{0}) = \mathbf{T'}_V \mathbf{T'}_D \mathbf{T'}_V^\top$$
+$$t'_{D(k,k)} = b + 2\sqrt{a}\sqrt{c}\cos{\frac{(k-1)\pi}{m}} \quad \forall k \in [1, m]$$  % \forall k, j \in [1, m]
+% $$t'_{V(k,j)} = \sqrt{\frac{2}{m}} \frac{\sqrt{a}^{k - 1}}{\sqrt{c}^{k - 1}}\cos{\frac{(k - 1)(2j - 1)}{2m}}$$
+
+\iffalse %{{{
+    $$\mathbf{T'}_m + \mathbf{S} = \mathbf{T'}_V \left( \mathbf{T'}_D + \mathbf{T'}^\top_V \mathbf{S} \mathbf{T'}_V \right) \mathbf{T'}^\top_V$$
+    
+    $$\left( \mathbf{T'}_m + \mathbf{S} \right)^{-1} = \mathbf{T'}^\top_V \left( \mathbf{T'}_D + \mathbf{T'}^\top_V \mathbf{S} \mathbf{T'}_V \right)^{-1} \mathbf{T'}_V$$
+    
+    Via Sherman–Morrison–Woodbury formula we get:
+    
+    $$\left( \mathbf{A} + \mathbf{U}\mathbf{C}\mathbf{V} \right)^{-1} = \mathbf{A}^{-1} - \mathbf{A}^{-1}\mathbf{U}\left( \mathbf{C}^{-1} + \mathbf{V}\mathbf{A}^{-1}\mathbf{U} \right)^{-1}\mathbf{V}\mathbf{A}^{-1}$$
+    
+    Via Weyl's inequality we know:
+    
+    ...%}}}
+\fi
+
+And those of a toeplitz matrix are
+$$\mathbf{T}_m (c,b,a) = \mathbf{T}_V \mathbf{T}_D \mathbf{T}_V^{-1}$$
+$$t_{D(k,k)} = b + 2\sqrt{a}\sqrt{c}\cos{\frac{k\pi}{m + 1}} \quad \forall k \in [1, m]$$
+
+By definition an induced, and therefore consistent, matrix norm is sub-multiplicative ($||\mathbf{A}\mathbf{B}|| \le ||\mathbf{A}|| ~ ||\mathbf{B}||$) and sub-additive ($||\mathbf{A} + \mathbf{B}|| \le ||\mathbf{A}|| + ||\mathbf{B}||$).  % , furthermore the 2-norm of a matrix happens to be the largest singular value, which for a real symmetric matrix is also the largest eigenvalue (a.k.a. the spectral radius).  % , hence why it is sometimes called the spectral norm.  % This is hard to calculate for a matrix for which we do not know the entries of.
+
+$\mathbf{T}_m (-1,2,-1)$, $\mathbf{T'}_m (-1,2,-1,\mathbf{0})$ and $\mathbf{S}$ are all (semi-)positive definite matrices. And in the case where $g^\vtt{W} = g^\vtt{E} = 1$
+$$\frac{\alpha}{g^\vtt{tl}_{i,i}} \mathcal{I} + \mathbf{T'}_m (-1,2,-1,g^\vtt{tl}_{i,i}\mathbf{S}) = \mathbf{T}_m (-1,2 + \frac{\alpha}{g^\vtt{tl}_{i,i}},-1)$$
+
+Which is a convex operation, and therefore
+
+\begin{align*}
+\rho \left( {\mathbf{M}^{(i)}}^{-1} \right) & = \frac{1}{g^\vtt{tl}_{i,i} \underset{k}{\min} {\left| \vtt{eig}\left( \mathbf{T'}_m \right)\right|}} \\ & \ge
+\frac{1}{\alpha + g^\vtt{tl}_{i,i} \left| t^{}_{D(m,m)} - t'_{D(m,m)} \right|} \\ & = 
+\frac{1}{\alpha + 2g^\vtt{tl}_{i,i} \left| \cos{\frac{\pi}{m + 1}} - \cos{\frac{\pi}{m}} \right|}  % \\ & \approx 
+\end{align*}
+
+With big $m$ we can use the small angle approximation of the cosine
+\begin{gather*}
+\cos{\frac{\pi}{m + 1}} - \cos{\frac{\pi}{m}} \approx 1 - \frac{\pi}{2(m + 1)}^2 - \left( 1 - \frac{\pi}{2m}^2 \right) \\ = 
+\frac{\pi}{2m}^2 - \frac{\pi}{2(m + 1)}^2 = \frac{\pi^2}{4}\frac{2m + 1}{m^2(m^2 + 2m + 1)}
+\end{gather*}
+
+\iffalse
+% = $$ $$ = \mathbf{T'}_V \mathbf{T'}^{\nicefrac{1}{2}}_D \left( \mathcal{I} + \mathbf{T'}^{\nicefrac{-1}{2}}_D \mathbf{T'}^\top_V \mathbf{S} \mathbf{T'}_V \mathbf{T'}^{\nicefrac{-1}{2}}_D \right) \mathbf{T'}^{\nicefrac{1}{2}}_D \mathbf{T'}^\top_V$$
+
+$$\mathbf{T'}^{\nicefrac{-1}{2}}_D \mathbf{T'}^\top_V \mathbf{S}^{\nicefrac{1}{2}} = \sqrt{\frac{2}{m}} \begin{bmatrix}
+   \sqrt{2}/2 & 0 & \cdots & \sqrt{2}/2 \\
+   1 & 0 & \cdots & -1 \\
+   1 & 0 & \cdots & (-1)^2 \\
+   \vdots & & & \vdots \\
+   1 & 0 & \cdots & (-1)^{(m-1)}
+\end{bmatrix} \mathbf{S}^{\nicefrac{1}{2}}$$
+\fi
+The $\mathbf{N}$ on the other hand can be decomposed as:
+$$\mathbf{N} = \begin{bmatrix} \mathcal{I} & -\mathbf{B}\mathbf{C}^{-1} \\ \mathcal{I} & \mathcal{I} \end{bmatrix} \begin{bmatrix} \alpha\mathcal{I} \\ & \alpha\mathcal{I} + \mathbf{B} + \mathbf{C} \end{bmatrix} \begin{bmatrix} \mathcal{I} & -\mathbf{B}\mathbf{C}^{-1} \\ \mathcal{I} & \mathcal{I} \end{bmatrix}^{-1}$$
+
+$$\rho(\mathbf{N}) = \alpha$$
+
+Therefore,
+
+$$\rho(\mathbf{M}^{-1}\mathbf{N}) = ||\mathbf{M}^{-1}\mathbf{N}||_2 \le ||\mathbf{M}^{-1}||_2||\mathbf{N}||_2 \le \frac{\alpha}{\alpha + O\left( \frac{\pi^2g^\vtt{tl}_{i,i}}{m^3} \right)} $$
+
+% While positive definiteness would normally allow us to use Cholesky decomposition and other direct methods, in our testing the condition number of the matrix is so big that \vtt{scipy}'s implementation of Cholesky fails with reason $\det{\mathbf{G}_{ABCD}} = \infty$, so it is still effectively singular to machine precision for big sizes of the matrix.
+
+\iffalse
+    To simplify calculations, let us fix the value of all $g^{wl}_{i,j}$ to the constant $g^{wl}$, all of $g^{bl}_{i,j}$ to $g^{bl}$, both of $g^\text{src}_{\leftarrow i}$ and $g^\text{src}_{\uparrow j}$ to $g^\text{src}$, and both of $g^\text{src}_{\rightarrow i}$ and $g^\text{out}_{\downarrow j}$ to $g^\text{out}$. Then $\mathbf{M}$ becomes composed of multiple tridiagonal systems close to Toeplitz matrices, for which we can know the eigendecomposition.  % https://www.2pi.se/publications/pdf/p6.pdf
+    $$\mathbf{M}^{}_{Ai} = g^{wl}\begin{bmatrix}
+        1 + \frac{\alpha + g^\text{src}}{g^{wl}} & -1 \\
+        -1 & 2 + \frac{\alpha}{g^{wl}} & -1 \\
+        & & \ddots \\
+        & & -1 & 2 + \frac{\alpha}{g^{wl}} & -1 \\
+        & & & -1 & 1 + \frac{\alpha + g^\text{out}}{g^{wl}} \\
+    \end{bmatrix} =$$ $$= \alpha \mathcal{I} + g^{wl}\begin{bmatrix} 
+    2 & -1 \\ -1 & 2 & -1 \\ && \ddots \\ && -1 & 2 & -1 \\ &&& -1 & 2 \\ 
+    \end{bmatrix} + \begin{bmatrix} 
+    g^\text{src} - g^{wl} \\ & 0 \\ && \ddots \\ &&& 0 \\ &&&& g^\text{out} - g^{wl} 
+    \end{bmatrix} =$$ $$\rho(\mathbf{M}^{-1}_{Ai}) = \min{\left| \alpha + g^{wl}(\mathbf{T} + \mathbf{D}) \right|}^{-1}$$
+
+    The eigendecomposition of a matrix of a similar form is:
+    $$\mathbf{T}^{}_{p} = \mathbf{T}^{}_{V}\mathbf{T}^{}_{D}\mathbf{T}^{-1}_{V} = \begin{bmatrix}
+        b & a \\ % + \sqrt{a}\sqrt{c} & a \\
+        c & b & a \\
+        & & \ddots \\
+        & & c & b & a \\
+        & & & c & b \\ % + \sqrt{a}\sqrt{c} \\
+    \end{bmatrix} \in \mathbb{R}^{p \times p}$$
+    % http://www.math.nthu.edu.tw/%7Eamen/2005/040903-7.pdf
+    $$t_{D(j,j)} = b + 2\sqrt{a}\sqrt{c}\cos{\frac{j\pi}{p + 1}} \quad t_{V(k,j)} = \sqrt{\frac{2}{p + 1}} \sqrt{\frac{a}{c}}^k\sin{k\frac{j\pi}{p + 1}} \quad \forall k, j \in [1, p]$$
+    
+    When $a = c = -1$ and $b = 2 + \frac{\alpha}{g^{wl}}$, we are only missing the effect of the $\frac{g^\text{src}}{g^{wl}}$ and $\frac{g^\text{out}}{g^{wl}}$ terms.
+    $$\rho(\mathbf{T}^{-1}_{D}) = \underset{1 \le j \le p}{\min}\left| \left( 2 + \frac{\alpha}{g^{wl}} \right) + 2\sqrt{-1}\sqrt{-1}\cos{\frac{j\pi}{p + 1}} \right|^{-1} = \left( \frac{\alpha}{g^{wl}} - \cos{\frac{\pi}{p + 1}} \right)^{-1}$$
+    $$\underset{p \rightarrow \infty}{\lim} \rho(\mathbf{T}^{-1}_{D}) = \frac{g^{wl}}{\alpha}$$
+
+    If we want to know the spectral radius for the original matrix, it can be based on the transformation between both ($\mathbf{Z}$).
+
+    \begin{gather*}
+        \frac{\mathbf{M}^{}_{Ai} - \alpha\mathcal{I}^{}_{m}}{g^{wl}} = \mathbf{T}^{}_{m}\mathbf{Z}^{}_{m} = \mathbf{T}^{}_{m} + \left( \frac{\mathbf{M}^{}_{Ai} - \alpha\mathcal{I}^{}_{m}}{g^{wl}} - \mathbf{T}^{}_{m} \right) = \mathbf{T}^{}_{m} + \begin{bmatrix} 
+            \frac{g^\text{src}}{g^{wl}} - 1 \\ & 0 \\ & & \ddots{} \\ & & & \frac{g^\text{out}}{g^{wl}} - 1
+        \end{bmatrix} \\
+        \mathbf{Z}^{}_{m} = \mathbf{T}^{-1}_{m}\frac{\mathbf{M}^{}_{Ai} - \alpha\mathcal{I}^{}_{m}}{g^{wl}} = \mathcal{I}^{}_{m} + \left[ \begin{array}{rccr} 
+            \frac{m}{m + 1}\left( \frac{g^\text{src}}{g^{wl}} - 1 \right) & & & \frac{1}{m + 1}\left( \frac{g^\text{out}}{g^{wl}} - 1 \right) \\
+            \frac{m - 1}{m + 1}\left( \frac{g^\text{src}}{g^{wl}} - 1 \right) & 0 & & \frac{2}{m + 1}\left( \frac{g^\text{out}}{g^{wl}} - 1 \right) \\
+            \vdots \qquad & & \ddots & \vdots \qquad \\
+            \frac{1}{m + 1}\left( \frac{g^\text{src}}{g^{wl}} - 1 \right) & & & \frac{m}{m + 1}\left( \frac{g^\text{out}}{g^{wl}} - 1 \right)
+        \end{array} \right] \\
+        \mathbf{Z'}^{}_{m} + \mathcal{I}^{}_{m} = \begin{bmatrix}  & 1 \\ \mathcal{I}^{}_{m - 1} & \end{bmatrix}^\top \mathbf{Z}^{}_{m} \begin{bmatrix}  & 1 \\ \mathcal{I}^{}_{m - 1} & \end{bmatrix} \\
+        g^\text{src}_m = \frac{\frac{g^\text{src}}{g^{wl}} - 1}{m + 1} \qquad g^\text{out}_m = \frac{\frac{g^\text{out}}{g^{wl}} - 1}{m + 1} \\
+        \\
+        \rho(\mathbf{Z}^{-1}_{m}) = \sqrt{||\mathbf{Z}^{-1}_{m}\mathbf{Z}^{-\top}_{m}||_2} = \sqrt{||(\mathbf{Z'}^{}_{m} + \mathcal{I}^{}_{m})^{-1}(\mathbf{Z'}^{}_{m} + \mathcal{I}^{}_{m})^{-\top}||_2} \\
+        p_{\mathbf{Z}^\top_{m}\mathbf{Z}^{}_{m}}(\lambda) = p_{\mathbf{Z'}^\top_{m}\mathbf{Z'}^{}_{m} + \mathbf{Z'}^\top_{m} + \mathbf{Z'}^{}_{m}  + \mathcal{I}^{}_{m}}(\lambda) = \\ = \begin{vmatrix} 
+            (1 - \lambda)\mathcal{I}^{}_{m - 2} & \mathbf{Z}^{}_{B} \\
+            \mathbf{Z}^\top_{B} & (1 - \lambda)\mathcal{I}^{}_{2} + \mathbf{Z}^{}_{D}
+        \end{vmatrix} = \\ = \biggl| (1 - \lambda)\mathcal{I}_{m - 2} \biggr| \left|\mathbf{Z}^{}_{D} - \frac{\mathbf{Z}^\top_{B}\mathbf{Z}^{}_{B}}{1 - \lambda} + (1 - \lambda)\mathcal{I}^{}_{2} \right| = \\ = (1 - \lambda)^{m-4} \left| (1 - \lambda)^2\mathcal{I}^{}_{2} + (1 - \lambda) \mathbf{Z}^{}_{D} - \mathbf{Z}^\top_{B}\mathbf{Z}^{}_{B} \right|
+    \end{gather*}
+
+    \begin{gather*}
+        \mathbf{Z}^{}_{B} = \left[ \begin{array}{rr} 
+            (m - 1)\, g^\text{src}_{m} & 2\, g^\text{out}_{m} \\
+            \vdots \quad & \vdots \quad \\
+            2\, g^\text{src}_{m} & (m - 1)\, g^\text{out}_{m} \\
+        \end{array} \right] \\
+        \mathbf{Z}^{T}_{B}\mathbf{Z}^{}_{B} = \begin{bmatrix}
+            k_{Za}\, (g^\text{src}_{m})^2 & k_{Zb}\, g^\text{src}_{m} g^\text{out}_{m}  \\
+            k_{Zb}\, g^\text{src}_{m} g^\text{out}_{m} & k_{Za}\, (g^\text{out}_{m})^2 \\
+        \end{bmatrix} \\
+        k_{Za} = \sum^{m-1}_{p=2} p^2 = \frac{(2m - 1)(m - 1)m}{6} - 1^2 \\  % = \frac{(m - 2)(2m^2 + m + 3)}{6} \\
+        k_{Zb} = \sum^{m-1}_{p=2} p(m + 1 - p) = (m + 1)\sum^{m-1}_{p=2} p - \sum^{m-1}_{p=2} p^2 = \\ = (m + 1) \left[ \frac{(m - 1)m}{2} - 1 \right] - k_{Za} = \frac{(m + 5)(m - 2)m}{6}  % = \\ = \frac{(m - 1)m}{2} \left[ (m + 1) - \frac{(2m - 1)}{3} \right] - m = \\ = \frac{(m + 4)(m - 1)m}{6} - m 
+         \\ \\
+        \mathbf{Z}^{}_{D}= \begin{bmatrix}
+            k_{Zd}\, (g^\text{src}_{m})^2 & k_{Zc}\, g^\text{src}_{m} g^\text{out}_{m} \\
+            k_{Zc}\, g^\text{src}_{m} g^\text{out}_{m} & k_{Zd}\, (g^\text{out}_{m})^2 \\
+        \end{bmatrix} + \begin{bmatrix}
+            2m\, g^\text{src}_{m} & g^\text{src}_{m} + g^\text{out}_{m} \\
+            g^\text{src}_{m} + g^\text{out}_{m} & 2m\, g^\text{out}_{m} \\
+        \end{bmatrix} \\
+        k_{Zd} = \sum^{m}_{p=1} p^2 = \frac{(2m +1)(m + 1)m}{6} = k_Za + m^2 + 1^2 \\
+        k_{Zc} + k_{Zd} = (m + 1)\sum^{m}_{p=1} p = \frac{(m + 1)^2m}{2} \\
+        k_{Zc} = \frac{(m + 2)(m + 1)m}{6} \\
+        \\
+        \frac{p_{\mathbf{Z}^\top_{m}\mathbf{Z}^{}_{m}}(\lambda)}{(1 - \lambda)^{m - 4}} = (1 - \lambda)^{4} + (1 - \lambda)^{3}k_{p3} + (1 - \lambda)^{2}k_{p2} + (1 - \lambda)^{1}k_{p1} + k_{p0} \\  % = \\ = \left(\left(g^\text{out}_m\right)^{2} k_{Za} v - \left(g^\text{out}_m\right)^{2} k_{Zd} - 2 g^\text{out}_m m + v^{2}\right) \\ \left(\left(g^\text{src}_m\right)^{2} k_{Za} v - \left(g^\text{src}_m\right)^{2} k_{Zd} - 2 g^\text{src}_m m + v^{2}\right)  \\ - \left(- g^\text{out}_m g^\text{src}_m k_{Zb} v + g^\text{out}_m g^\text{src}_m k_{Zc} + g^\text{out}_m + g^\text{src}_m\right)^{2} \\ \\
+        k_{p3} = k_{Za} \left[ (g^\text{src}_{m})^2 + (g^\text{out}_{m})^2 \right] \\
+        k_{p2} = \left( k^2_{Za} - k^2_{Zb} \right)(g^\text{src}_{m}g^\text{out}_{m})^2 - k_{Zd} \left[ (g^\text{src}_{m})^2 + (g^\text{out}_{m})^2 \right] - 2m \left[ g^\text{src}_{m} + g^\text{out}_{m} \right] = \\ = \frac{\left(m - 3\right) \left(m - 2\right)^{2} \left(m - 1\right) \left(m + 1\right)^{2}}{12}(g^\text{src}_{m}g^\text{out}_{m})^2 + ... \\
+        k_{p1} =  \\
+        k_{p0} =  
+    \end{gather*}
+    \begin{gather*}
+        y^3 + y^2k_{y2} + yk_{y1} + k_{y0} \\
+        k_{y2} = -k_{p3} \\
+        k_{y1} = k_{p1} k_{p3} - 4 k_{p0} \\
+        k_{y0} = 4 k_{p2}k_{p0} - k^2_{p1} - k^2_{p3} k_{p0} \\
+        \\ \\
+        \rho(\mathbf{M}^{-1}_{Ai}) = \frac{\rho(\mathbf{Z}^{-1}_{m}\mathbf{T}^{-1}_{m})}{g^{wl}} = \frac{||\mathbf{Z}^{-1}_{m}\mathbf{T}^{-1}_{m}||_2}{g^{wl}} \le \frac{||\mathbf{Z}^{-1}_{m}||_2||\mathbf{T}^{-1}_{m}||_2}{g^{wl}} \\
+        ||\mathbf{Z}^{-1}_{m}||_2 = \frac{1}{\underset{\lambda}{\min} \sqrt{\lambda^2}} = \underset{\lambda}{\min}|\lambda|^{-1}  \\
+        \rho(\mathbf{M}^{-1}_{Ai}) \le \frac{1}{\cancel{g^{wl}}} \frac{\cancel{g^{wl}}}{\alpha} \frac{1}{1 + O(\frac{\alpha}{g^{wl}})\frac{g^\text{src}}{g^{wl}}}
+    \end{gather*}
+
+    We can do the same process for $\mathbf{D}$, but in block tridiagonal matrix form, where all submatrices are diagonal.
+    $$\mathbf{M}^{}_{D} = \mathbf{D} + (\alpha \mathcal{I} + \mathbf{C}) = g^{bl}\begin{bmatrix}
+        (1 + \frac{\alpha + g^\text{src}}{g^{bl}})\mathcal{I}_n & -\mathcal{I}_n \\
+        -\mathcal{I}_n & (2 + \frac{\alpha}{g^{bl}})\mathcal{I}_n & -\mathcal{I}_n \\
+        & & \ddots \\
+        & & -\mathcal{I}_n & (2 + \frac{\alpha}{g^{bl}})\mathcal{I}_n & -\mathcal{I}_n \\
+        & & & -\mathcal{I}_n & (1 + \frac{\alpha + g^\text{out}}{g^{bl}})\mathcal{I}_n \\
+    \end{bmatrix}$$
+
+
+    The $\mathbf{N}$ on the other hand can be decomposed as:
+    $$\mathbf{N} = \begin{bmatrix} \mathcal{I} & -\mathbf{B}\mathbf{C}^{-1} \\ \mathcal{I} & \mathcal{I} \end{bmatrix} \begin{bmatrix} \alpha\mathcal{I} \\ & \alpha\mathcal{I} + \mathbf{B} + \mathbf{C} \end{bmatrix} \begin{bmatrix} \mathcal{I} & -\mathbf{B}\mathbf{C}^{-1} \\ \mathcal{I} & \mathcal{I} \end{bmatrix}^{-1} \quad \rho(\mathbf{N}) = \alpha$$
+    
+    Note that for all previous formulas $\mathbf{B} = \mathbf{C}$, but if we want to remove the previous restrictions on constant values, we can formulate the same argument by modifying $\mathbf{G}^{}_{ABCD}$ to have constant off-by-1 diagonals. \\  % , for which the modified $\mathbf{B}$ and $\mathbf{C}$ would not be equal. \\
+    
+    This means that the convergence matrix has an upper bound to the spectral radius of $\rho(\mathbf{M}^{-1}\mathbf{N}) \le \rho(\mathbf{M}^{-1})\rho(\mathbf{N}) = \frac{1}{1 + O(\frac{\alpha}{g^{wl}})\frac{g^\text{src}}{g^{wl}}}$, for $n = m = 100$, $\alpha = 1/1000$, $g^{wl} = g^{bl} = 1/2$ and $g^\text{src} = g^\text{out} = 1/50$ this is $\approx .95$. \\
+\fi
+
+\newpage
+\section{Backpropagation with $\mathbf{G}_{ABCD}$} \label{sec:bck}
+    In a regular fully connected layer we train the weights by modifying them using the gradient calculated from the loss function, for example in a classification task the categorical cross-entropy % negative log likelihood 
+    between the output ($\hat{\mathbf{y}}$) of the neural network through the softmax function ($\sigma( \hat{\mathbf{y}})$ [probability vector]) and the ground truth ($\mathbf{y}$ [one-hot vector]).
+
+    \begin{gather*} % https://math.stackexchange.com/questions/945871/derivative-of-softmax-loss-function
+        \ell = \vtt{loss}(\mathbf{y},\hat{\mathbf{y}}) = -\sum^{}_{i \ne j} y_i  \log_e(\sigma(\hat{y}_i)) ~~~~~~~~~~~
+        \sigma(\hat{y}_i) = P(C=i|\hat{y}_i) = \frac{e^{\hat{y}_i}}{\sum^{C}_{k \ne i} e^{\hat{y}_k}} \\
+        \frac{\partial \sigma(\hat{y}_j)}{\partial \hat{y}_i} = 
+        \begin{cases}
+            \sigma(\hat{y}_j)[1 - \sigma(\hat{y}_i)] & i = j \\
+            \sigma(\hat{y}_j) \sigma(\hat{y}_i) & i \ne j \\
+        \end{cases} ~~~~~~~~~~~
+        \sum^{C}_{k} y_k = \sum^{C}_{k} \sigma(\hat{y}_k) = 1 \\
+    \end{gather*}
+    
+    We would then calculate the loss with respect to our output, via the chain rule (a.k.a backpropagation):
+    
+    \begin{gather*}
+        \frac{\partial \ell}{\partial \hat{\mathbf{y}}} = \frac{\partial \ell}{\partial \sigma(\hat{\mathbf{y}})} \frac{\partial \sigma(\hat{\mathbf{y}})}{\partial \hat{\mathbf{y}}} = -\sum^{C}_{k} y_k \frac{\partial \log_e(\sigma(\hat{y}_k))}{\partial \sigma(\hat{y}_k)} \frac{\partial \sigma(\hat{y}_k)}{\partial \hat{y}_i} = \\
+         = y_i[1 - \sigma(\hat{y}_i)] -\sum^{C}_{k \ne i} y_k \frac{1}{\sigma(\hat{y}_k)} (-\sigma(\hat{y}_k) \sigma(\hat{y}_i)) = \sigma(\hat{y}_i) - y_i
+    \end{gather*}
+    
+    And then continue applying the chain rule to get the gradient of other layers:
+    
+    $$\frac{\partial \ell}{\partial \mathbf{x}} = \frac{\partial \ell}{\partial \hat{\mathbf{y}}} \frac{\partial \hat{\mathbf{y}}}{\partial \mathbf{a}^{(k)}} \frac{\partial \mathbf{a}^{(k)}}{\partial \mathbf{a}^{(k-1)}} \cdots \frac{\partial \mathbf{a}^{(1)}}{\partial \mathbf{x}}$$
+    
+    For each layer then we need to know the loss for the previous layer and how we should adjust the weights, that is $\frac{\partial \vtt{loss}(\mathbf{y},\hat{\mathbf{y}})}{\partial \mathbf{G}^{(k)}}$, which for the case where $\mathbf{a}^{(k)} = \mathbf{G}^{(k)}\mathbf{a}^{(k-1)}$, the gradients would be:
+    
+    $$\frac{\partial \ell}{\partial \mathbf{G}^{(k)}} = \frac{\partial \ell}{\partial \mathbf{a}^{(k)}} \frac{\partial \mathbf{a}^{(k)}}{\partial \mathbf{G}^{(k)}} = \frac{\partial \ell}{\partial \mathbf{a}^{(k)}} (\mathbf{a}^{(k-1)})^\top~~~~~~~~\frac{\partial \mathbf{a}^{(k)}}{\partial \mathbf{a}^{(k-1)}} = (\mathbf{G}^{(k)})^\top$$
+    
+    Our case, however, where $\mathbf{v}^\vtt{ext} = \mathbf{G}^{-1}_{ABCD}\mathbf{i}^\vtt{ext}$, can be solved as follows, with the resulting backpropagation of the loss.
+
+    $$ %{{{
+        \frac{\partial \ell}{\partial \mathbf{i}^\text{ext}} = \mathbf{G}^{-\top}_{ABCD} \frac{\partial \ell}{\partial \mathbf{v}^\text{ext}}  % = \mathbf{G}^{-\top}_{ABCD} \mathbf{V}^\text{ext}_{p} \frac{\partial \ell}{\partial \mathbf{v}^\text{ext}_{d}}
+    $$
+    $$
+        \frac{\partial \ell}{\partial \mathbf{G}^{}_{ABCD}} = -\left( \mathbf{G}^{-\top}_{ABCD}\frac{\partial \ell}{\partial \mathbf{v}^\text{ext}}\right)\left(\mathbf{G}^{-1}_{ABCD}\mathbf{i}^\text{ext} \right)^\top = -\frac{\partial \ell}{\partial \mathbf{i}^\text{ext}}(\mathbf{v}^\text{ext})^\top
+    $$ %}}}
+    
+    Furthermore, $\frac{\partial \ell}{\partial \mathbf{v}^\text{ext}}$ is very sparse since we only know the $n$ outputs at the edge of the crossbar array, as they are the only ones which we can compare, using the same reasoning as before, we only need to keep the rows of $\mathbf{G}^{-1}_{ABCD}$ that get multiplied by non-zero loss. % We would still need the other entries of the output for the non-linear case, but not for back-propagation. \\
+    
+    However, we are only interested in $\frac{\partial \ell}{\partial \mathbf{G}^{}_{ABCD}}$ in so far as we can use it to compute $\frac{\partial \ell}{\partial \mathbf{G}}$. And while the former is dense, we only care about the element that depend on the latter, which are entirely located in the diagonals of $\mathbf{A}$, $\mathbf{B}$, $\mathbf{C}$, $\mathbf{D}$.
+    
+    $$ %{{{
+        \frac{\partial \ell}{\partial \mathbf{G}^{}_{ABCD}} = \begin{bmatrix}
+             \frac{\partial \ell}{\partial \mathbf{A}} & \frac{\partial \ell}{\partial \mathbf{B}} \\
+             \frac{\partial \ell}{\partial \mathbf{C}} & \frac{\partial \ell}{\partial \mathbf{D}}
+        \end{bmatrix} \\
+    $$
+    $$
+        \frac{\partial \ell}{\partial \vtt{vec}(\mathbf{G})}
+    %    = \frac{\partial \ell}{\partial \mathbf{A}|_{i=j}}
+    %    \frac{\partial \mathbf{A}|_{i=j}}{\partial \vtt{vec}(\mathbf{G})} +
+    %    \frac{\partial \ell}{\partial \mathbf{B}|_{i=j}}
+    %    \frac{\partial \mathbf{B}|_{i=j}}{\partial \vtt{vec}(\mathbf{G})} +
+    %    \frac{\partial \ell}{\partial \mathbf{C}|_{i=j}}
+    %    \frac{\partial \mathbf{C}|_{i=j}}{\partial \vtt{vec}(\mathbf{G})} +
+    %    \frac{\partial \ell}{\partial \mathbf{D}|_{i=j}}
+    %    \frac{\partial \mathbf{D}|_{i=j}}{\partial \vtt{vec}(\mathbf{G})} =
+    %$$
+    %$$
+        = \vtt{diag} \left( \frac{\partial \ell}{\partial \mathbf{A}} + \frac{\partial \ell}{\partial \mathbf{B}} + \frac{\partial \ell}{\partial \mathbf{C}} + \frac{\partial \ell}{\partial \mathbf{D}} \right) \vtt{vec}(\mathbf{G})
+    $$ %}}}
+    % Where $\vtt{d_vec}(\mathbf{X})$ is the function that returns the vector with the diagonal elements of X.
+
+\\
+\bibliography{jobname}
+
+
+\end{document}
