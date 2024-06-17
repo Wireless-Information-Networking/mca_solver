@@ -1,5 +1,5 @@
 # Memristor Crossbar Array Solver
-Code to produce and visualize the results of 'Memristor Crossbar Array Simulation for Deep Learning Applications'.
+Code to produce and visualize the results of 'Memristor Crossbar Array Simulation for Deep Learning Applications' (DOI: [10.1109/TNANO.2024.3415382](https://doi.org/10.1109/TNANO.2024.3415382)).
 
 We also include some supplementary material, with an example and additional mathematics about the solver.
 
